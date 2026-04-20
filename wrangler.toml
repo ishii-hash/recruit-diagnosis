@@ -1,0 +1,11 @@
+name = "recruit-site-diagnosis"
+compatibility_date = "2026-04-01"
+pages_build_output_dir = "."
+
+# D1 データベースのバインディング
+# ※ Cloudflareダッシュボードで D1 を作成後、
+#    発行された database_id に書き換えてください。
+[[d1_databases]]
+binding = "DB"
+database_name = "recruit-diagnosis"
+database_id = "YOUR_D1_DATABASE_ID_HERE"

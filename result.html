@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>診断結果 | 採用サイト診断.ai</title>
+<meta name="description" content="採用サイトの診断結果。構造・表現・UXの3側面からの評価と改善提案をお届けします。">
+<meta name="theme-color" content="#070058">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Noto+Serif+JP:wght@400;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a href="index.html" class="logo">
+      <img class="logo-mark" src="img/hr_hacker_mark.png" alt="">
+      採用サイト診断<span class="logo-accent">.ai</span>
+    </a>
+    <nav class="global-nav">
+      <a href="index.html">別のURLを診断</a>
+    </nav>
+  </div>
+</header>
+
+<main class="result-main">
+
+<section class="result-summary">
+  <div class="container">
+    <div class="result-meta">
+      <p class="result-meta-label">診断対象URL</p>
+      <p class="result-meta-url" id="target-url">-</p>
+      <p class="result-meta-date" id="analyzed-at">-</p>
+    </div>
+
+    <div class="score-hero">
+      <div class="score-hero-total">
+        <p class="score-hero-label">総合スコア</p>
+        <div class="score-hero-num">
+          <span id="total-score">-</span><small>/100</small>
+        </div>
+        <p class="score-hero-grade" id="total-grade">-</p>
+      </div>
+      <div class="score-hero-summary">
+        <h2 class="score-hero-title" id="hero-title">-</h2>
+        <p class="score-hero-desc" id="hero-desc">-</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="result-radar">
+  <div class="container">
+    <div class="radar-wrap">
+      <div class="radar-head">
+        <h2 class="section-title-left">表現チェック — 言霊原理構造学</h2>
+        <p class="section-lead">７つの観点で文章の"伝わる構造"をL1〜L5で評価しました。</p>
+      </div>
+      <div class="radar-body">
+        <div class="radar-canvas-wrap">
+          <canvas id="radar-chart"></canvas>
+        </div>
+        <ul class="radar-legend" id="radar-legend"></ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="result-structure">
+  <div class="container">
+    <h2 class="section-title-left">構造チェック — 採用UXチェックリスト</h2>
+    <p class="section-lead">採用サイトに必要な要素が揃っているかを自動判定しました。</p>
+    <div class="structure-grid" id="structure-grid"></div>
+  </div>
+</section>
+
+<section class="result-actions">
+  <div class="container">
+    <h2 class="section-title-left">優先的に取り組むべき改善アクション</h2>
+    <p class="section-lead">診断結果から、効果が大きく実装しやすい順に３つご提案します。</p>
+    <ol class="actions-list" id="actions-list"></ol>
+  </div>
+</section>
+
+<section class="result-cta">
+  <div class="container">
+    <div class="result-cta-box">
+      <div class="result-cta-logo">
+        <img src="img/hr_hacker_logo.png" alt="HRハッカー">
+      </div>
+      <div class="result-cta-copy">
+        <p class="result-cta-eyebrow">OFFER FOR YOU</p>
+        <h2>採用サイトを "計測できる" 状態に。<br>HRハッカーのトラッキングタグを<br>無料でお試しいただけます。</h2>
+        <ul class="result-cta-points">
+          <li>独自ドメインでの採用サイト構築に対応</li>
+          <li>タグ設置で閲覧履歴・滞在時間を可視化</li>
+          <li>今なら診断利用者限定で無料トライアル</li>
+        </ul>
+        <a href="https://hr-hacker.com/top/" target="_blank" rel="noopener" class="btn-primary btn-large">無料でトラッキングタグを試す →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="site-footer-inner">
+      <img src="img/invision_logo.jpg" alt="インビジョン株式会社">
+      <p>&copy; 2026 採用サイト診断.ai　運営：インビジョン株式会社</p>
+    </div>
+  </div>
+</footer>
+
+<script src="js/dummy-data.js"></script>
+<script src="js/result.js"></script>
+</body>
+</html>
