@@ -16,6 +16,10 @@
  */
 
 const CLAUDE_MODEL = 'claude-haiku-4-5-20251001';
+const MAX_LINKED_PAGES = 5;
+const MAIN_PAGE_TEXT_MAX = 10000;
+const SUB_PAGE_TEXT_MAX = 2500;
+const FETCH_TIMEOUT_MS = 8000;
 
 export async function onRequestPost(context) {
   const { request, env } = context;
@@ -32,31 +36,30 @@ export async function onRequestPost(context) {
       return jsonError('http/https のURLのみ対応しています', 400);
     }
 
-    // -- 1) Fetch target page --
+    // -- 1) Fetch main page --
     let html;
     try {
-      const res = await fetch(parsed.href, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; RecruitSiteAnalyzer/1.0)'
-        },
-        cf: { cacheTtl: 300 }
-      });
+      const res = await fetchWithTimeout(parsed.href, FETCH_TIMEOUT_MS);
       if (!res.ok) return jsonError(`ページ取得に失敗しました (status: ${res.status})`, 400);
       html = await res.text();
     } catch (err) {
       return jsonError('ページ取得に失敗しました', 400);
     }
 
-    const pageText = extractVisibleText(html);
-    if (pageText.length < 200) {
+    const mainText = extractVisibleText(html, MAIN_PAGE_TEXT_MAX);
+    if (mainText.length < 200) {
       return jsonError('ページから十分な本文を取得できませんでした', 400);
     }
+
+    // -- 1b) Fetch internal linked pages (recruit-related) --
+    const linkedPages = await fetchLinkedPages(html, parsed);
 
     // -- 2) Claude に診断を依頼 --
     if (!env.CLAUDE_API_KEY) {
       return jsonError('サーバー設定エラー: APIキーが未設定です', 500);
     }
-    const analysis = await callClaude(pageText, parsed.href, env.CLAUDE_API_KEY);
+    const combinedText = buildCombinedText(parsed.href, mainText, linkedPages);
+    const analysis = await callClaude(combinedText, parsed.href, env.CLAUDE_API_KEY);
 
     // -- 3) D1 へ記録（失敗してもユーザー側には影響させない） --
     if (env.DB) {
@@ -89,7 +92,7 @@ function jsonError(message, status) {
   });
 }
 
-function extractVisibleText(html) {
+function extractVisibleText(html, maxLen) {
   return html
     .replace(/<!--[\s\S]*?-->/g, '')
     .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
@@ -103,7 +106,95 @@ function extractVisibleText(html) {
     .replace(/&quot;/g, '"')
     .replace(/\s+/g, ' ')
     .trim()
-    .slice(0, 15000);
+    .slice(0, maxLen || 15000);
+}
+
+async function fetchWithTimeout(url, timeoutMs) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; RecruitSiteAnalyzer/1.0)' },
+      cf: { cacheTtl: 300 },
+      signal: controller.signal
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// 採用文脈で重視したいURLキーワード（スコア高いほど優先）
+const KEYWORD_WEIGHTS = [
+  ['recruit', 5], ['career', 5], ['job', 4], ['careers', 5],
+  ['member', 4], ['members', 4], ['people', 4], ['team', 3],
+  ['interview', 5], ['voice', 4], ['story', 3], ['stories', 3],
+  ['culture', 4], ['value', 3], ['values', 3], ['mission', 3],
+  ['vision', 3], ['philosophy', 3], ['message', 3],
+  ['about', 2], ['company', 2], ['benefit', 3], ['welfare', 3],
+  ['environment', 2], ['work', 2], ['workstyle', 3]
+];
+
+function rankInternalLinks(html, baseUrl) {
+  const seen = new Map();
+  const re = /<a\s+[^>]*href=["']([^"'#]+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+  let m;
+  while ((m = re.exec(html)) !== null) {
+    const rawHref = m[1];
+    const anchorText = m[2].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+    let resolved;
+    try { resolved = new URL(rawHref, baseUrl.href); }
+    catch { continue; }
+    if (resolved.hostname !== baseUrl.hostname) continue;
+    if (!/^https?:$/.test(resolved.protocol)) continue;
+    // 拡張子フィルタ
+    if (/\.(pdf|jpe?g|png|gif|svg|webp|ico|zip|mp4|mov|webm|css|js)(\?|$)/i.test(resolved.pathname)) continue;
+    // 自分自身はスキップ
+    if (resolved.href.replace(/\/$/, '') === baseUrl.href.replace(/\/$/, '')) continue;
+    resolved.hash = '';
+    const key = resolved.href;
+    if (seen.has(key)) continue;
+
+    const path = resolved.pathname.toLowerCase();
+    let score = 0;
+    for (const [kw, w] of KEYWORD_WEIGHTS) {
+      if (path.includes(kw)) score += w;
+    }
+    // アンカーテキストにも採用系キーワードがあれば加点
+    const anchorLower = anchorText.toLowerCase();
+    for (const kw of ['社員', 'メンバー', '採用', '募集', '仕事', 'インタビュー', '声', 'カルチャー', '文化', 'ビジョン', 'ミッション', '代表', 'メッセージ', '福利', '制度']) {
+      if (anchorText.includes(kw)) score += 3;
+    }
+    for (const [kw, w] of KEYWORD_WEIGHTS) {
+      if (anchorLower.includes(kw)) score += 1;
+    }
+    if (score <= 0) continue;
+    seen.set(key, { url: resolved.href, score, anchorText: anchorText.slice(0, 40) });
+  }
+  return Array.from(seen.values()).sort((a, b) => b.score - a.score);
+}
+
+async function fetchLinkedPages(html, baseUrl) {
+  const candidates = rankInternalLinks(html, baseUrl).slice(0, MAX_LINKED_PAGES);
+  const results = await Promise.all(
+    candidates.map(async (c) => {
+      try {
+        const res = await fetchWithTimeout(c.url, FETCH_TIMEOUT_MS);
+        if (!res.ok) return null;
+        const text = extractVisibleText(await res.text(), SUB_PAGE_TEXT_MAX);
+        if (text.length < 100) return null;
+        return { url: c.url, anchorText: c.anchorText, text };
+      } catch { return null; }
+    })
+  );
+  return results.filter(Boolean);
+}
+
+function buildCombinedText(mainUrl, mainText, linkedPages) {
+  const parts = [`=== メインページ: ${mainUrl} ===\n${mainText}`];
+  linkedPages.forEach((p, i) => {
+    parts.push(`\n=== 関連ページ${i + 1}: ${p.anchorText ? p.anchorText + ' / ' : ''}${p.url} ===\n${p.text}`);
+  });
+  return parts.join('\n');
 }
 
 async function callClaude(pageText, targetUrl, apiKey) {
@@ -155,12 +246,12 @@ function buildSystemPrompt() {
 }
 
 function buildUserPrompt(pageText, url) {
-  return `以下は採用サイトまたは採用広報記事から抽出した本文です。この内容を診断し、JSONで結果を返してください。
+  return `以下は診断対象の採用サイトから抽出した本文です。メインページに加えて、内部リンクで辿れる関連ページ（社員紹介・メッセージ・カルチャー等）の本文も含まれています。サイト全体を総合的に評価し、JSONで結果を返してください。
 
-【URL】
+【診断対象URL】
 ${url}
 
-【本文抽出】
+【本文抽出（メインページ＋関連ページ）】
 ${pageText}
 
 【出力JSONフォーマット】
