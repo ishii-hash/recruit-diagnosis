@@ -210,7 +210,7 @@ async function callClaude(pageText, targetUrl, apiKey) {
     },
     body: JSON.stringify({
       model: CLAUDE_MODEL,
-      max_tokens: 4096,
+      max_tokens: 8192,
       system: systemPrompt,
       messages: [
         { role: 'user', content: userPrompt },
@@ -227,16 +227,72 @@ async function callClaude(pageText, targetUrl, apiKey) {
   const data = await res.json();
   const text = '{' + (data.content[0]?.text || '');
 
-  // JSON部分のみ抽出してパース
-  const start = text.indexOf('{');
-  const end = text.lastIndexOf('}');
-  if (start === -1 || end === -1) throw new Error('Claude応答のJSONパースに失敗しました');
-
-  const parsed = JSON.parse(text.slice(start, end + 1));
+  const parsed = parseJsonLenient(text);
   // サーバー側で補填
   parsed.url = targetUrl;
   parsed.analyzedAt = formatDate(new Date());
   return parsed;
+}
+
+// Claudeのレスポンスが途中で切れた場合でも、構造が追えるところまで復元してパース
+function parseJsonLenient(text) {
+  const start = text.indexOf('{');
+  if (start === -1) throw new Error('Claude応答にJSONが含まれていません');
+  let body = text.slice(start);
+
+  // まず素直に試す
+  try { return JSON.parse(body); } catch { /* fallthrough */ }
+
+  // 末尾のカンマや不完全なトークンを削り、括弧/引用符を閉じる
+  let s = body;
+  // 閉じ未了の文字列をトリム: 最後のエスケープされていない " の直後まで有効と見なす
+  const lastCompleteQuoteMatch = findSafeTail(s);
+  s = s.slice(0, lastCompleteQuoteMatch);
+  // 末尾のカンマや空白を落とす
+  s = s.replace(/[,\s]+$/g, '');
+
+  // スタック解析で未閉じの {, [ を追加
+  const stack = [];
+  let inStr = false;
+  let escape = false;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (inStr) {
+      if (escape) { escape = false; continue; }
+      if (ch === '\\') { escape = true; continue; }
+      if (ch === '"') inStr = false;
+      continue;
+    }
+    if (ch === '"') { inStr = true; continue; }
+    if (ch === '{' || ch === '[') stack.push(ch);
+    else if (ch === '}' || ch === ']') stack.pop();
+  }
+  while (stack.length) {
+    const open = stack.pop();
+    s += open === '{' ? '}' : ']';
+  }
+
+  try { return JSON.parse(s); }
+  catch (e) { throw new Error('Claude応答のJSONパースに失敗しました: ' + e.message); }
+}
+
+// 末尾が文字列リテラルの途中で切れていたら、その手前までに切り詰める
+function findSafeTail(s) {
+  let inStr = false;
+  let escape = false;
+  let lastSafe = 0;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (inStr) {
+      if (escape) { escape = false; continue; }
+      if (ch === '\\') { escape = true; continue; }
+      if (ch === '"') { inStr = false; lastSafe = i + 1; }
+      continue;
+    }
+    if (ch === '"') { inStr = true; continue; }
+    lastSafe = i + 1;
+  }
+  return lastSafe;
 }
 
 function buildSystemPrompt() {
