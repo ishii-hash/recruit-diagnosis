@@ -34,8 +34,8 @@ window.addEventListener('load', () => {
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 btnPull.addEventListener('click', pullGacha);
 document.getElementById('btnClaim').addEventListener('click', goToForm);
-document.getElementById('btnClose').addEventListener('click', closeModal);
-overlay.addEventListener('click', closeModal);
+document.getElementById('btnClose').addEventListener('click', () => closeModal());
+overlay.addEventListener('click', () => closeModal());
 document.getElementById('claimForm').addEventListener('submit', submitClaim);
 
 /* ---- Pull ---- */
