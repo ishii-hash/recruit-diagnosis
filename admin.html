@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ガチャ管理画面｜インビジョン</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/gacha.css">
+</head>
+<body class="page-admin">
+
+  <!-- Login screen (shown until authenticated) -->
+  <div class="admin-login" id="loginScreen">
+    <div class="admin-login__box">
+      <div style="font-size:2.5rem;margin-bottom:12px;">🔐</div>
+      <h1 class="admin-login__title">管理画面ログイン</h1>
+      <p class="admin-login__sub">ガチャ特典を管理するには<br>パスワードを入力してください</p>
+      <form id="loginForm">
+        <div class="form-field">
+          <label for="adminPass">パスワード</label>
+          <input type="password" id="adminPass" placeholder="管理者パスワード" autocomplete="current-password" required>
+        </div>
+        <p class="form-error" id="loginError" style="display:none">パスワードが正しくありません</p>
+        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;padding:13px">
+          <span id="loginBtnText">ログイン</span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Admin dashboard (hidden until authenticated) -->
+  <div id="adminDashboard" style="display:none">
+
+    <header class="gacha-header">
+      <div class="header-inner">
+        <a href="/" class="header-logo">インビジョン株式会社</a>
+        <nav class="header-nav">
+          <a href="/gacha.html">ガチャを見る</a>
+          <button class="btn btn-ghost btn-sm" onclick="logout()">ログアウト</button>
+        </nav>
+      </div>
+    </header>
+
+    <main class="admin-main">
+      <h1 class="admin-page-title">ガチャ特典 管理画面</h1>
+      <p class="admin-page-sub">特典の追加・編集・削除ができます。重みが大きいほど出現確率が上がります。</p>
+
+      <!-- Stats -->
+      <div class="admin-stats" id="statsRow">
+        <div class="stat-card">
+          <div class="stat-card__label">登録特典数</div>
+          <div class="stat-card__value" id="statTotal">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card__label">有効特典数</div>
+          <div class="stat-card__value" id="statActive">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card__label">総ガチャ回数</div>
+          <div class="stat-card__value" id="statPulls">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card__label">本日のガチャ</div>
+          <div class="stat-card__value" id="statToday">—</div>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="admin-tabs">
+        <button class="admin-tab active" id="tabPrizes" onclick="switchTab('prizes')">🎁 特典管理</button>
+        <button class="admin-tab" id="tabClaims" onclick="switchTab('claims')">📬 応募者一覧</button>
+      </div>
+
+      <!-- Tab: Prizes -->
+      <div id="panelPrizes">
+        <div class="admin-toolbar">
+          <span class="admin-toolbar__title">登録特典</span>
+          <button class="btn btn-primary" onclick="openAddModal()">＋ 新しい特典を追加</button>
+        </div>
+        <div class="prizes-table-wrap">
+          <table class="prizes-table">
+            <thead>
+              <tr>
+                <th>特典名</th>
+                <th>説明</th>
+                <th>レアリティ</th>
+                <th style="text-align:center">重み</th>
+                <th style="text-align:center">有効</th>
+                <th style="text-align:right">操作</th>
+              </tr>
+            </thead>
+            <tbody id="prizesTableBody">
+              <tr><td colspan="6"><div class="empty-state"><div class="empty-state__icon">⏳</div><p class="empty-state__text">読み込み中...</p></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tab: Claims -->
+      <div id="panelClaims" style="display:none">
+        <div class="admin-toolbar">
+          <span class="admin-toolbar__title">応募者一覧（最新 200 件）</span>
+          <button class="btn btn-ghost" onclick="loadClaims()">↻ 更新</button>
+        </div>
+        <div class="prizes-table-wrap">
+          <table class="prizes-table">
+            <thead>
+              <tr>
+                <th>日時</th>
+                <th>名前</th>
+                <th>会社名</th>
+                <th>メールアドレス</th>
+                <th>当選特典</th>
+                <th>レアリティ</th>
+              </tr>
+            </thead>
+            <tbody id="claimsTableBody">
+              <tr><td colspan="6"><div class="empty-state"><div class="empty-state__icon">⏳</div><p class="empty-state__text">読み込み中...</p></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+
+    <footer class="gacha-footer">
+      <p>© 2025 インビジョン株式会社 — ガチャ管理システム</p>
+    </footer>
+  </div>
+
+  <!-- Add / Edit Modal -->
+  <div class="modal-backdrop" id="prizeModal" style="display:none">
+    <div class="modal-card">
+      <h2 class="modal-card__title" id="modalTitle">特典を追加</h2>
+      <form id="prizeForm">
+        <input type="hidden" id="editId">
+
+        <div class="form-field">
+          <label for="prizeName">特典名 <span style="color:var(--c-accent)">*</span></label>
+          <input type="text" id="prizeName" placeholder="例：キャリア相談 30分" required maxlength="80">
+        </div>
+
+        <div class="form-field">
+          <label for="prizeDesc">説明文</label>
+          <textarea id="prizeDesc" placeholder="特典の内容を簡潔に説明してください" maxlength="200"></textarea>
+        </div>
+
+        <div class="form-field">
+          <label for="prizeRarity">レアリティ</label>
+          <select id="prizeRarity">
+            <option value="normal">ノーマル</option>
+            <option value="rare">レア</option>
+            <option value="super_rare">スーパーレア</option>
+          </select>
+        </div>
+
+        <div class="form-field">
+          <label for="prizeWeight">重み（出現確率の相対値）</label>
+          <input type="number" id="prizeWeight" value="100" min="1" max="9999" required>
+          <p class="weight-hint">数値が大きいほど出現しやすくなります（ノーマル:100 / レア:50 / スーパーレア:10 が目安）</p>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" onclick="closeModal()">キャンセル</button>
+          <button type="submit" class="btn btn-primary" id="saveBtn">
+            <span id="saveBtnText">保存する</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast notification -->
+  <div id="toastContainer"></div>
+
+  <script src="js/admin-gacha.js"></script>
+</body>
+</html>

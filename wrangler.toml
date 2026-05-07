@@ -9,3 +9,9 @@ pages_build_output_dir = "."
 binding = "DB"
 database_name = "recruit-diagnosis"
 database_id = "22dc6d60-4ddc-4506-839c-c9823adedbda"
+
+# ガチャ管理画面のパスワード
+# 本番環境では Cloudflare Secret に移行してください:
+#   wrangler secret put ADMIN_PASSWORD
+[vars]
+ADMIN_PASSWORD = "change-me-before-deploy"

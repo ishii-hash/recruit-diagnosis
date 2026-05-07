@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>採用ガチャ｜インビジョン株式会社</title>
+  <meta name="description" content="採用サポートの特典をガチャで引いてみよう！キャリア相談・診断レポートなど豪華特典が当たるかも。">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/gacha.css">
+</head>
+<body>
+<div class="page-gacha">
+
+  <!-- Header -->
+  <header class="gacha-header">
+    <div class="header-inner">
+      <a href="/" class="header-logo">インビジョン株式会社</a>
+      <nav class="header-nav">
+        <a href="/">採用サイト診断</a>
+        <a href="/gacha.html">採用ガチャ</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="gacha-hero">
+    <p class="hero-eyebrow">採用サポート特典</p>
+    <h1 class="hero-title">
+      採用<span>ガチャ</span>
+    </h1>
+    <p class="hero-sub">
+      あなたへの特別な採用サポート特典が当たるかも！<br>
+      ガチャを引いて、次の採用をもっと強くしよう。
+    </p>
+  </section>
+
+  <!-- Machine -->
+  <section class="gacha-machine-section">
+    <div class="machine-container">
+
+      <!-- Rarity strip -->
+      <div class="rarity-strip" id="rarityStrip" style="opacity:0">
+        <div class="rarity-badge normal"><span class="rarity-dot"></span>ノーマル</div>
+        <div class="rarity-badge rare"><span class="rarity-dot"></span>レア</div>
+        <div class="rarity-badge super_rare"><span class="rarity-dot"></span>スーパーレア</div>
+      </div>
+
+      <!-- Gacha machine -->
+      <div class="machine" id="machine">
+
+        <!-- Dome -->
+        <div class="machine__dome-wrap">
+          <div class="machine__dome">
+            <div class="capsules-orbit" id="capsulesOrbit">
+              <span class="capsule cap-1"></span>
+              <span class="capsule cap-2"></span>
+              <span class="capsule cap-3"></span>
+              <span class="capsule cap-4"></span>
+              <span class="capsule cap-5"></span>
+              <span class="capsule cap-6"></span>
+              <span class="capsule cap-7"></span>
+              <span class="capsule cap-8"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Neck -->
+        <div class="machine__neck"></div>
+
+        <!-- Body -->
+        <div class="machine__body">
+          <div class="machine__brand">
+            GACHA
+            <span class="machine__brand-sub">採用サポート特典</span>
+          </div>
+          <div class="machine__coin-area">
+            <div class="machine__coin-slot"></div>
+            <span class="machine__coin-label">COIN</span>
+          </div>
+        </div>
+
+        <!-- Base / Tray -->
+        <div class="machine__base">
+          <div class="machine__tray" id="machineTray"></div>
+        </div>
+
+        <!-- Lever -->
+        <div class="machine__lever-container" id="leverContainer">
+          <div class="machine__lever-shaft"></div>
+          <div class="machine__lever-knob"></div>
+        </div>
+
+      </div><!-- /.machine -->
+
+      <!-- Pull button -->
+      <button class="btn-pull" id="btnPull">
+        <span class="btn-pull__icon">🎰</span>
+        <span class="btn-pull__text" id="btnText">ガチャを引く！</span>
+      </button>
+
+      <p class="gacha-hint" id="gachaHint">特典はランダムに決まります</p>
+
+    </div>
+  </section>
+
+  <!-- Prize list -->
+  <section class="prizes-section" id="prizesSection">
+    <div class="prizes-section__inner">
+      <p class="prizes-section__label">当たる可能性のある特典</p>
+      <h2 class="prizes-section__title">特典ラインナップ</h2>
+      <div class="prizes-grid" id="prizesGrid">
+        <!-- filled by JS -->
+        <div class="prize-card-skeleton"></div>
+        <div class="prize-card-skeleton"></div>
+        <div class="prize-card-skeleton"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="gacha-footer">
+    <p>© 2025 インビジョン株式会社</p>
+  </footer>
+
+</div><!-- /.page-gacha -->
+
+<!-- Prize Modal -->
+<div class="prize-modal" id="prizeModal" style="display:none" role="dialog" aria-modal="true">
+  <div class="prize-modal__overlay" id="modalOverlay"></div>
+  <div class="prize-modal__box" id="prizeBox">
+    <div class="sparkles" id="sparkles"></div>
+
+    <!-- Step 1: Prize reveal -->
+    <div id="stepReveal">
+      <div class="modal-capsule-icon" id="modalCapsuleIcon"></div>
+      <div class="modal-rarity" id="modalRarity"></div>
+      <h2 class="modal-prize-name" id="modalPrizeName"></h2>
+      <p class="modal-prize-desc" id="modalPrizeDesc"></p>
+      <button class="btn-modal-cta" id="btnClaim">この特典を受け取る！</button>
+      <button class="btn-modal-skip" id="btnClose">今は不要です</button>
+    </div>
+
+    <!-- Step 2: Lead capture form -->
+    <div id="stepForm" style="display:none">
+      <div class="modal-form-header">
+        <div class="modal-form-icon">📬</div>
+        <h2 class="modal-form-title">特典の受け取り情報を入力</h2>
+        <p class="modal-form-sub">担当者より 2 営業日以内にご連絡いたします</p>
+      </div>
+      <form id="claimForm">
+        <div class="claim-field">
+          <label for="claimName">お名前 <span class="req">必須</span></label>
+          <input type="text" id="claimName" placeholder="山田 太郎" required maxlength="50">
+        </div>
+        <div class="claim-field">
+          <label for="claimCompany">会社名</label>
+          <input type="text" id="claimCompany" placeholder="株式会社〇〇" maxlength="100">
+        </div>
+        <div class="claim-field">
+          <label for="claimEmail">メールアドレス <span class="req">必須</span></label>
+          <input type="email" id="claimEmail" placeholder="taro@example.com" required maxlength="200">
+        </div>
+        <p class="claim-note">※ご入力いただいた情報はインビジョン株式会社の個人情報保護方針に基づき管理します。</p>
+        <button type="submit" class="btn-modal-cta" id="btnSubmit">
+          <span id="submitBtnText">特典を受け取る →</span>
+        </button>
+        <button type="button" class="btn-modal-back" onclick="goBackToReveal()">← 戻る</button>
+      </form>
+    </div>
+
+    <!-- Step 3: Success -->
+    <div id="stepSuccess" style="display:none">
+      <div class="modal-success-icon">🎉</div>
+      <h2 class="modal-success-title">受け取り申請が完了しました！</h2>
+      <p class="modal-success-sub">担当者より 2 営業日以内に<br>ご連絡いたします。お楽しみに！</p>
+      <div class="modal-success-prize">
+        <span class="modal-rarity" id="successRarity"></span>
+        <strong id="successPrizeName"></strong>
+      </div>
+      <button class="btn-modal-close" onclick="closeModal()">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confetti container -->
+<div id="confettiContainer" aria-hidden="true"></div>
+
+<script src="js/gacha.js"></script>
+</body>
+</html>
