@@ -97,7 +97,13 @@ function showPrize(prize) {
 /* ---- Step navigation ---- */
 function goToForm() {
   sparkles.innerHTML = '';
-  showStep('form');
+  const prize = lastResult?.prize;
+  const r     = prize?.rarity || 'normal';
+  document.getElementById('successRarity').className  = `modal-rarity ${r}`;
+  document.getElementById('successRarity').textContent = RARITY_LABEL[r] || r;
+  document.getElementById('successPrizeName').textContent = prize?.name || '';
+  showStep('success');
+  launchConfetti(60);
 }
 
 window.goBackToReveal = function () {
